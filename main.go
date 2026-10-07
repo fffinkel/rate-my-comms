@@ -15,12 +15,19 @@ import (
 
 func main() {
 	addr := flag.String("addr", envOr("ADDR", ":8080"), "listen address")
-	data := flag.String("data", envOr("DATA_FILE", "votes.jsonl"), "path to the votes file")
+	data := flag.String("data", envOr("DATA_FILE", "votes.jsonl"), "path to the votes file, used when -dynamo-table is empty")
+	table := flag.String("dynamo-table", envOr("DYNAMO_TABLE", ""), "DynamoDB table name; when set, votes go there instead of the file")
 	flag.Parse()
 
 	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
-	store, err := OpenStore(*data)
+	var store Store
+	var err error
+	if *table != "" {
+		store, err = OpenDynamoStore(context.Background(), *table)
+	} else {
+		store, err = OpenFileStore(*data)
+	}
 	if err != nil {
 		log.Error("open store", "err", err)
 		os.Exit(1)
@@ -42,7 +49,7 @@ func main() {
 		srv.Shutdown(shutdownCtx)
 	}()
 
-	log.Info("listening", "addr", *addr, "data", *data)
+	log.Info("listening", "addr", *addr, "data", *data, "dynamo_table", *table)
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Error("serve", "err", err)
 		os.Exit(1)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"io"
 	"log/slog"
 	"net/http"
@@ -11,10 +12,9 @@ import (
 	"testing"
 )
 
-func newTestServer(t *testing.T) (*Store, http.Handler) {
+func newTestServer(t *testing.T) (Store, http.Handler) {
 	t.Helper()
-	path := filepath.Join(t.TempDir(), "votes.jsonl")
-	store, err := OpenStore(path)
+	store, err := OpenFileStore(filepath.Join(t.TempDir(), "votes.jsonl"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -29,7 +29,7 @@ func TestVoteCountsOnClick(t *testing.T) {
 	if rec.Code != 200 {
 		t.Fatalf("status %d: %s", rec.Code, rec.Body)
 	}
-	votes := store.ByKey("Weekly update")
+	votes, _ := store.ByKey(context.Background(), "Weekly update")
 	if len(votes) != 1 || votes[0].Value != "yes" {
 		t.Fatalf("votes = %+v", votes)
 	}
@@ -54,30 +54,30 @@ func TestVoteRejectsBadValue(t *testing.T) {
 	}
 }
 
-func TestCommentAttachesToVote(t *testing.T) {
-	store, h := newTestServer(t)
-	id, err := store.Add("k", "4")
-	if err != nil {
-		t.Fatal(err)
-	}
-	form := url.Values{"id": {id}, "comment": {"  more charts please  "}}
+func postComment(h http.Handler, id, key, comment string) *httptest.ResponseRecorder {
+	form := url.Values{"id": {id}, "key": {key}, "comment": {comment}}
 	req := httptest.NewRequest("POST", "/comment", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
-	if rec.Code != 200 {
+	return rec
+}
+
+func TestCommentAttachesToVote(t *testing.T) {
+	store, h := newTestServer(t)
+	ctx := context.Background()
+	id, err := store.Add(ctx, "k", "4")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rec := postComment(h, id, "k", "  more charts please  "); rec.Code != 200 {
 		t.Fatalf("status %d: %s", rec.Code, rec.Body)
 	}
-	if got := store.ByKey("k")[0].Comment; got != "more charts please" {
+	votes, _ := store.ByKey(ctx, "k")
+	if got := votes[0].Comment; got != "more charts please" {
 		t.Fatalf("comment = %q", got)
 	}
-
-	form.Set("id", "nope")
-	req = httptest.NewRequest("POST", "/comment", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	rec = httptest.NewRecorder()
-	h.ServeHTTP(rec, req)
-	if rec.Code != 404 {
+	if rec := postComment(h, "nope", "k", "x"); rec.Code != 404 {
 		t.Fatalf("unknown id: status %d, want 404", rec.Code)
 	}
 }
@@ -104,32 +104,33 @@ func TestIndexShowsSnippets(t *testing.T) {
 	}
 }
 
-func TestStoreReplay(t *testing.T) {
+func TestFileStoreReplay(t *testing.T) {
+	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "votes.jsonl")
-	s, err := OpenStore(path)
+	s, err := OpenFileStore(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	id, _ := s.Add("k", "no")
-	s.Add("k", "yes")
-	if err := s.SetComment(id, "hi"); err != nil {
+	id, _ := s.Add(ctx, "k", "no")
+	s.Add(ctx, "k", "yes")
+	if err := s.SetComment(ctx, id, "k", "hi"); err != nil {
 		t.Fatal(err)
 	}
 	s.Close()
 
-	s2, err := OpenStore(path)
+	s2, err := OpenFileStore(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer s2.Close()
-	votes := s2.ByKey("k")
+	votes, _ := s2.ByKey(ctx, "k")
 	if len(votes) != 2 {
 		t.Fatalf("got %d votes after replay, want 2", len(votes))
 	}
 	if votes[0].Comment != "hi" || votes[1].Comment != "" {
 		t.Fatalf("comments after replay: %+v", votes)
 	}
-	if keys := s2.Keys(); len(keys) != 1 || keys[0].Count != 2 {
+	if keys, _ := s2.Keys(ctx); len(keys) != 1 || keys[0].Count != 2 {
 		t.Fatalf("keys = %+v", keys)
 	}
 }

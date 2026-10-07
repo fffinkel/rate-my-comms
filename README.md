@@ -7,13 +7,18 @@ comment. No login, no second click required.
 ## Run
 
 ```sh
-go run . -addr :8080 -data votes.jsonl
+go run . -addr :8080 -dynamo-table rate-my-comms
 ```
 
 | Flag | Env var | Default | Meaning |
 |---|---|---|---|
 | `-addr` | `ADDR` | `:8080` | Listen address |
-| `-data` | `DATA_FILE` | `votes.jsonl` | Where votes are stored |
+| `-dynamo-table` | `DYNAMO_TABLE` | empty | DynamoDB table. When set, votes go there. |
+| `-data` | `DATA_FILE` | `votes.jsonl` | Local file used when no table is set |
+
+AWS region and credentials come from the usual SDK chain (env vars,
+instance profile, pod identity). The table and an IAM policy are in
+`terraform/`. Attach the policy to the role your pods assume.
 
 Logs are JSON on stdout. `GET /healthz` returns `ok`.
 
@@ -37,9 +42,26 @@ Results are at `/results?key=<title>`. `/results` lists every title.
 
 ## Storage
 
-Votes append to a JSON Lines file, one record per line. Adding a comment
-appends a second record with the same `id`; the file is replayed on start and
-later records win. Back it up by copying the file. Run one instance per file.
+DynamoDB holds one item per vote: partition key `key` (the title), sort key
+`id`, plus `value`, `at`, and optional `comment`. Results for one title are a
+single Query. The `/results` list is a Scan, fine at this volume.
+
+Without a table the app appends votes to a JSON Lines file and replays it on
+start. Good for local runs and tests. Single instance only.
+
+## Test
+
+```sh
+go test ./...
+```
+
+The DynamoDB store test needs DynamoDB Local and is skipped otherwise:
+
+```sh
+docker run -d --rm -p 8000:8000 amazon/dynamodb-local
+AWS_ENDPOINT_URL_DYNAMODB=http://localhost:8000 AWS_REGION=us-east-1 \
+  AWS_ACCESS_KEY_ID=x AWS_SECRET_ACCESS_KEY=x go test ./...
+```
 
 ## Known limits
 

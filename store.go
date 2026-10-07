@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -23,10 +24,20 @@ type Vote struct {
 	At      time.Time `json:"at"`
 }
 
-// Store keeps votes in memory and appends every change to a JSON Lines
+// Store is where votes live. FileStore is for local use and tests;
+// DynamoStore is for deployment.
+type Store interface {
+	Add(ctx context.Context, key, value string) (string, error)
+	SetComment(ctx context.Context, id, key, comment string) error
+	ByKey(ctx context.Context, key string) ([]Vote, error)
+	Keys(ctx context.Context) ([]KeyCount, error)
+	Close() error
+}
+
+// FileStore keeps votes in memory and appends every change to a JSON Lines
 // file. On start it replays the file; records sharing an ID merge, so a
 // comment added later overwrites the earlier empty comment.
-type Store struct {
+type FileStore struct {
 	mu    sync.Mutex
 	path  string
 	f     *os.File
@@ -35,8 +46,8 @@ type Store struct {
 
 var ErrNotFound = errors.New("vote not found")
 
-func OpenStore(path string) (*Store, error) {
-	s := &Store{path: path, votes: map[string]*Vote{}}
+func OpenFileStore(path string) (*FileStore, error) {
+	s := &FileStore{path: path, votes: map[string]*Vote{}}
 	if err := s.load(); err != nil {
 		return nil, err
 	}
@@ -48,7 +59,7 @@ func OpenStore(path string) (*Store, error) {
 	return s, nil
 }
 
-func (s *Store) load() error {
+func (s *FileStore) load() error {
 	f, err := os.Open(s.path)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil
@@ -78,7 +89,7 @@ func (s *Store) load() error {
 	return sc.Err()
 }
 
-func (s *Store) append(v *Vote) error {
+func (s *FileStore) append(v *Vote) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -89,10 +100,10 @@ func (s *Store) append(v *Vote) error {
 	return s.f.Sync()
 }
 
-func (s *Store) Close() error { return s.f.Close() }
+func (s *FileStore) Close() error { return s.f.Close() }
 
 // Add records a vote and returns its ID.
-func (s *Store) Add(key, value string) (string, error) {
+func (s *FileStore) Add(_ context.Context, key, value string) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	v := &Vote{ID: newID(), Key: key, Value: value, At: time.Now().UTC()}
@@ -104,7 +115,7 @@ func (s *Store) Add(key, value string) (string, error) {
 }
 
 // SetComment attaches a comment to an existing vote.
-func (s *Store) SetComment(id, comment string) error {
+func (s *FileStore) SetComment(_ context.Context, id, _ string, comment string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	v, ok := s.votes[id]
@@ -121,7 +132,7 @@ func (s *Store) SetComment(id, comment string) error {
 }
 
 // ByKey returns votes for one key, oldest first.
-func (s *Store) ByKey(key string) []Vote {
+func (s *FileStore) ByKey(_ context.Context, key string) ([]Vote, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var out []Vote
@@ -131,11 +142,11 @@ func (s *Store) ByKey(key string) []Vote {
 		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].At.Before(out[j].At) })
-	return out
+	return out, nil
 }
 
 // Keys returns every key with its vote count, most recent activity first.
-func (s *Store) Keys() []KeyCount {
+func (s *FileStore) Keys(_ context.Context) ([]KeyCount, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	m := map[string]*KeyCount{}
@@ -155,7 +166,7 @@ func (s *Store) Keys() []KeyCount {
 		out = append(out, *kc)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Last.After(out[j].Last) })
-	return out
+	return out, nil
 }
 
 type KeyCount struct {

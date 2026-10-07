@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"errors"
 	"fmt"
 	"html/template"
 	"log/slog"
@@ -22,13 +23,13 @@ const (
 )
 
 type server struct {
-	store *Store
+	store Store
 	log   *slog.Logger
 	tmpl  *template.Template
 	mux   *http.ServeMux
 }
 
-func newServer(store *Store, log *slog.Logger) http.Handler {
+func newServer(store Store, log *slog.Logger) http.Handler {
 	s := &server{
 		store: store,
 		log:   log,
@@ -157,7 +158,7 @@ func (s *server) vote(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	id, err := s.store.Add(key, value)
+	id, err := s.store.Add(r.Context(), key, value)
 	if err != nil {
 		s.log.Error("add vote", "err", err)
 		http.Error(w, "could not save vote", http.StatusInternalServerError)
@@ -177,14 +178,15 @@ func (s *server) comment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := r.PostForm.Get("id")
+	key := r.PostForm.Get("key")
 	comment := strings.TrimSpace(r.PostForm.Get("comment"))
 	if utf8.RuneCountInString(comment) > maxCommentLen {
 		http.Error(w, fmt.Sprintf("comment longer than %d characters", maxCommentLen), http.StatusBadRequest)
 		return
 	}
 	if comment != "" {
-		if err := s.store.SetComment(id, comment); err != nil {
-			if err == ErrNotFound {
+		if err := s.store.SetComment(r.Context(), id, key, comment); err != nil {
+			if errors.Is(err, ErrNotFound) {
 				http.Error(w, "unknown vote", http.StatusNotFound)
 				return
 			}
@@ -200,10 +202,21 @@ func (s *server) comment(w http.ResponseWriter, r *http.Request) {
 func (s *server) results(w http.ResponseWriter, r *http.Request) {
 	key := strings.TrimSpace(r.URL.Query().Get("key"))
 	if key == "" {
-		s.render(w, "keys.html", s.store.Keys())
+		keys, err := s.store.Keys(r.Context())
+		if err != nil {
+			s.log.Error("list keys", "err", err)
+			http.Error(w, "could not load results", http.StatusInternalServerError)
+			return
+		}
+		s.render(w, "keys.html", keys)
 		return
 	}
-	votes := s.store.ByKey(key)
+	votes, err := s.store.ByKey(r.Context(), key)
+	if err != nil {
+		s.log.Error("load votes", "key", key, "err", err)
+		http.Error(w, "could not load results", http.StatusInternalServerError)
+		return
+	}
 	tally := map[string]int{}
 	sum, n := 0, 0
 	var comments []Vote

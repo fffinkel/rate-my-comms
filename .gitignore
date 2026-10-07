@@ -1,2 +1,4 @@
 /rate-my-comms
 *.jsonl
+terraform/.terraform/
+terraform/*.tfstate*
