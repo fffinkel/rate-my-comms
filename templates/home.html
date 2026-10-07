@@ -1,0 +1,32 @@
+{{template "head" "Rate my comms"}}
+<p><a href="/links">Make links</a> · <a href="/results">Results</a></p>
+<h1>Rate my comms</h1>
+<p>One-click feedback for emails and Slack posts. You add rating links to a message. Readers click one. That click is the vote. They land on a page with an optional comment box, and can close the tab or type a line.</p>
+
+<h2>How to use it</h2>
+<ol>
+  <li>Open <a href="/links">Make links</a>. Enter the email subject or post title. Pick Yes/No or a number scale.</li>
+  <li>Copy the snippet for Slack, HTML email, or plain text. Paste it at the end of your message.</li>
+  <li>Send. Check <a href="/results">Results</a> whenever you like. Use the same title again next time to keep a running tally.</li>
+</ol>
+
+<h2>Slack</h2>
+<p>Paste the plain text snippet into your message. Slack turns the URLs into links. If you post through a workflow or the API, use the Slack snippet instead; the <code>&lt;url|text&gt;</code> form renders as link text.</p>
+
+<h2>Email</h2>
+<p>In Gmail or Outlook, paste the plain text snippet and the URLs become links. If you edit HTML directly, for example a newsletter tool or a signature, paste the HTML snippet.</p>
+
+<h2>Writing links by hand</h2>
+<p>Any visit to a vote URL counts one vote. Spaces in the title are written <code>%20</code>.</p>
+<pre>{{.Base}}/vote?key=Weekly%20update&amp;value=yes
+{{.Base}}/vote?key=Weekly%20update&amp;value=no
+{{.Base}}/vote?key=Weekly%20update&amp;value=4</pre>
+<p><code>value</code> is <code>yes</code>, <code>no</code>, or a whole number from 1 to 10.</p>
+
+<h2>Good to know</h2>
+<ul>
+  <li>There is no login. Anyone with the link can vote, and anyone who can reach this site can see results.</li>
+  <li>Each click is a vote, so one reader can vote more than once.</li>
+  <li>Email security scanners sometimes open links before the reader does. Expect a little noise on big email lists.</li>
+</ul>
+{{template "foot"}}

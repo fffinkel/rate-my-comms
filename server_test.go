@@ -82,10 +82,10 @@ func TestCommentAttachesToVote(t *testing.T) {
 	}
 }
 
-func TestIndexShowsSnippets(t *testing.T) {
+func TestLinksShowsSnippets(t *testing.T) {
 	_, h := newTestServer(t)
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/?key=Q3+plan&kind=scale&scale=3", nil)
+	req := httptest.NewRequest("GET", "/links?key=Q3+plan&kind=scale&scale=3", nil)
 	req.Host = "rate.example"
 	req.Header.Set("X-Forwarded-Proto", "https")
 	h.ServeHTTP(rec, req)
@@ -96,11 +96,25 @@ func TestIndexShowsSnippets(t *testing.T) {
 		"https://rate.example/results?key=Q3%20plan",
 	} {
 		if !strings.Contains(body, want) {
-			t.Errorf("index missing %q", want)
+			t.Errorf("links page missing %q", want)
 		}
 	}
 	if strings.Contains(body, "value=4") {
 		t.Error("scale 3 should not produce value=4")
+	}
+}
+
+func TestHomeLinksToPages(t *testing.T) {
+	_, h := newTestServer(t)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
+	if rec.Code != 200 {
+		t.Fatalf("status %d", rec.Code)
+	}
+	for _, want := range []string{`href="/links"`, `href="/results"`, "/vote?key="} {
+		if !strings.Contains(rec.Body.String(), want) {
+			t.Errorf("home missing %q", want)
+		}
 	}
 }
 

@@ -24,7 +24,7 @@ Logs are JSON on stdout. `GET /healthz` returns `ok`.
 
 ## Use
 
-Open `/`, enter the email subject or post title, and copy the Slack, HTML
+Open `/links`, enter the email subject or post title, and copy the Slack, HTML
 email, or plain text snippet into your message. Or write the links by hand:
 
 ```
@@ -38,7 +38,8 @@ box. `value` is `yes`, `no`, or an integer from 1 to 10. Use `%20` for spaces
 in the key. Generated links use the request host; set `X-Forwarded-Proto`
 on your proxy for https.
 
-Results are at `/results?key=<title>`. `/results` lists every title.
+Results are at `/results?key=<title>`. `/results` lists every title. `/`
+explains all of this to readers.
 
 ## Storage
 

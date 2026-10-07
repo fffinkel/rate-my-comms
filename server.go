@@ -36,7 +36,8 @@ func newServer(store Store, log *slog.Logger) http.Handler {
 		tmpl:  template.Must(template.New("").Funcs(template.FuncMap{"seq": seq}).ParseFS(templateFS, "templates/*.html")),
 		mux:   http.NewServeMux(),
 	}
-	s.mux.HandleFunc("GET /{$}", s.index)
+	s.mux.HandleFunc("GET /{$}", s.home)
+	s.mux.HandleFunc("GET /links", s.links)
 	s.mux.HandleFunc("GET /vote", s.vote)
 	s.mux.HandleFunc("POST /comment", s.comment)
 	s.mux.HandleFunc("GET /results", s.results)
@@ -49,9 +50,14 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.mux.ServeHTTP(w, r)
 }
 
-// index shows copy-paste snippets for a key. Query params key, kind and
+// home explains the app and how to use it.
+func (s *server) home(w http.ResponseWriter, r *http.Request) {
+	s.render(w, "home.html", struct{ Base string }{baseURL(r)})
+}
+
+// links shows copy-paste snippets for a key. Query params key, kind and
 // scale let the page be bookmarked.
-func (s *server) index(w http.ResponseWriter, r *http.Request) {
+func (s *server) links(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	key := strings.TrimSpace(q.Get("key"))
 	kind := q.Get("kind")
@@ -91,7 +97,7 @@ func (s *server) index(w http.ResponseWriter, r *http.Request) {
 			data.Results = base + "/results?key=" + escape(key)
 		}
 	}
-	s.render(w, "index.html", data)
+	s.render(w, "links.html", data)
 }
 
 type link struct {

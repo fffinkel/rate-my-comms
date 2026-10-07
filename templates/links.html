@@ -1,8 +1,8 @@
 {{template "head" "Rate my comms"}}
-<h1>Rate my comms</h1>
-<p class="muted">Paste one-click rating links into an email or Slack post. <a href="/results">See results</a>.</p>
+<p><a href="/">← About</a> · <a href="/results">Results</a></p>
+<h1>Make rating links</h1>
 
-<form method="get" action="/">
+<form method="get" action="/links">
   <label for="key">Communication title (email subject, Slack post title)</label>
   <input type="text" id="key" name="key" value="{{.Key}}" required maxlength="200" autofocus>
   {{if .KeyErr}}<p class="err">{{.KeyErr}}</p>{{end}}
