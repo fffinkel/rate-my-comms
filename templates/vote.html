@@ -1,0 +1,9 @@
+{{template "head" "Thanks"}}
+<h1>Thanks, your vote is in.</h1>
+<p class="muted">You voted <strong>{{.Value}}</strong> on “{{.Key}}”. Anything to add? Optional.</p>
+<form method="post" action="/comment">
+  <input type="hidden" name="id" value="{{.ID}}">
+  <textarea name="comment" maxlength="4000" placeholder="What worked, what didn't, what was missing..." autofocus></textarea>
+  <button type="submit">Send</button>
+</form>
+{{template "foot"}}

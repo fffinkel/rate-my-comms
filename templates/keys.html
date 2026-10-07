@@ -1,0 +1,8 @@
+{{template "head" "Results"}}
+<p><a href="/">← Make links</a></p>
+<h1>Results</h1>
+{{if not .}}<p class="muted">No votes yet.</p>{{end}}
+<table>
+  {{range .}}<tr><td><a href="/results?key={{.Key}}">{{.Key}}</a></td><td>{{.Count}}</td><td class="muted">{{.Last.Format "2006-01-02 15:04 MST"}}</td></tr>{{end}}
+</table>
+{{template "foot"}}

@@ -1,0 +1,16 @@
+{{template "head" "Results"}}
+<p><a href="/results">← All</a></p>
+<h1>{{.Key}}</h1>
+<p>{{.Total}} vote{{if ne .Total 1}}s{{end}}{{if .Average}}, average {{.Average}}{{end}}</p>
+<table>
+  <tr><th>Value</th><th>Count</th></tr>
+  {{range $v, $n := .Tally}}<tr><td>{{$v}}</td><td>{{$n}}</td></tr>{{end}}
+</table>
+{{if .Comments}}
+<h2>Comments</h2>
+{{range .Comments}}
+<p class="muted">{{.Value}} · {{.At.Format "2006-01-02 15:04 MST"}}</p>
+<blockquote>{{.Comment}}</blockquote>
+{{end}}
+{{end}}
+{{template "foot"}}

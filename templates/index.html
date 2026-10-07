@@ -1,0 +1,60 @@
+{{template "head" "Rate my comms"}}
+<h1>Rate my comms</h1>
+<p class="muted">Paste one-click rating links into an email or Slack post. <a href="/results">See results</a>.</p>
+
+<form method="get" action="/">
+  <label for="key">Communication title (email subject, Slack post title)</label>
+  <input type="text" id="key" name="key" value="{{.Key}}" required maxlength="200" autofocus>
+  {{if .KeyErr}}<p class="err">{{.KeyErr}}</p>{{end}}
+
+  <label for="kind">Vote type</label>
+  <select id="kind" name="kind">
+    <option value="yesno" {{if eq .Kind "yesno"}}selected{{end}}>Yes / No</option>
+    <option value="scale" {{if eq .Kind "scale"}}selected{{end}}>Number scale</option>
+  </select>
+
+  <label for="scale">Scale top (number scale only)</label>
+  <select id="scale" name="scale">
+    {{range $i := seq 2 10}}<option value="{{$i}}" {{if eq $i $.Scale}}selected{{end}}>1 to {{$i}}</option>{{end}}
+  </select>
+
+  <button type="submit">Make links</button>
+</form>
+
+{{if .Links}}
+<h2>Links for “{{.Key}}”</h2>
+<p>Results: <a href="{{.Results}}">{{.Results}}</a></p>
+
+<div class="snippet">
+  <header><strong>Slack</strong><button type="button" data-copy="slack">Copy</button></header>
+  <p class="muted">Slack renders <code>&lt;url|text&gt;</code> as a link when posted through the API or a workflow. For hand-typed messages use the plain text version; Slack links bare URLs.</p>
+  <pre id="slack">{{.Slack}}</pre>
+</div>
+
+<div class="snippet">
+  <header><strong>Email (HTML)</strong><button type="button" data-copy="email">Copy</button></header>
+  <pre id="email">{{.Email}}</pre>
+</div>
+
+<div class="snippet">
+  <header><strong>Plain text</strong><button type="button" data-copy="plain">Copy</button></header>
+  <pre id="plain">{{.Plain}}</pre>
+</div>
+
+<div class="snippet">
+  <header><strong>Preview</strong></header>
+  <p>{{range $i, $l := .Links}}{{if $i}} · {{end}}<a href="{{$l.URL}}">{{$l.Label}}</a>{{end}}</p>
+</div>
+
+<script>
+  document.querySelectorAll('[data-copy]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      navigator.clipboard.writeText(document.getElementById(b.dataset.copy).textContent).then(function () {
+        b.textContent = 'Copied';
+        setTimeout(function () { b.textContent = 'Copy'; }, 1500);
+      });
+    });
+  });
+</script>
+{{end}}
+{{template "foot"}}
