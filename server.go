@@ -114,7 +114,7 @@ func snippets(kind string, links []link) (slack, email, plain string) {
 	}
 	prompt := "Was this communication useful?"
 	if kind == "scale" {
-		prompt = fmt.Sprintf("Was this communication useful? (1 = not useful, %d = very useful)", len(links))
+		prompt = fmt.Sprintf("How useful was this communication? (1 = not useful, %d = very useful)", len(links))
 	}
 	slack = prompt + " " + strings.Join(sl, " · ")
 	email = "<p>" + prompt + " " + strings.Join(em, " &middot; ") + "</p>"
