@@ -22,6 +22,14 @@ instance profile, pod identity). The table and an IAM policy are in
 
 Logs are JSON on stdout. `GET /healthz` returns `ok`.
 
+The home page footer shows the git commit the binary was built from. Go
+records it when you build inside a git checkout. If your build copies the
+source without `.git`, pass it in:
+
+```sh
+go build -ldflags "-X main.version=$(git rev-parse HEAD)" .
+```
+
 ## Use
 
 Open `/links`, enter the email subject or post title, click Copy, and paste

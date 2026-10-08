@@ -27,6 +27,7 @@ type server struct {
 	store Store
 	log   *slog.Logger
 	tmpl  *template.Template
+	build buildInfo
 	mux   *http.ServeMux
 }
 
@@ -35,6 +36,7 @@ func newServer(store Store, log *slog.Logger) http.Handler {
 		store: store,
 		log:   log,
 		tmpl:  template.Must(template.ParseFS(templateFS, "templates/*.html")),
+		build: readBuildInfo(),
 		mux:   http.NewServeMux(),
 	}
 	s.mux.HandleFunc("GET /{$}", s.home)
@@ -53,7 +55,10 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // home explains the app and how to use it.
 func (s *server) home(w http.ResponseWriter, r *http.Request) {
-	s.render(w, "home.html", struct{ Base string }{baseURL(r)})
+	s.render(w, "home.html", struct {
+		Base  string
+		Build buildInfo
+	}{baseURL(r), s.build})
 }
 
 // links shows copy-paste snippets for a key. Query params key and kind

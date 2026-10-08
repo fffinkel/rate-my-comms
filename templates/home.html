@@ -26,4 +26,8 @@
   <li>Each click is a vote, so one reader can vote more than once.</li>
   <li>Email security scanners sometimes open links before the reader does. Expect a little noise on big email lists.</li>
 </ul>
+<footer class="muted">
+  Built by <a href="https://mfinkel.net">Matt</a> ·
+  {{if .Build.URL}}<a href="{{.Build.URL}}">{{.Build.Short}}</a>{{else}}{{.Build.Short}}{{end}}{{if .Build.Dirty}} (modified){{end}}
+</footer>
 {{template "foot"}}

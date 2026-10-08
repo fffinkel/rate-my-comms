@@ -111,7 +111,7 @@ func TestHomeLinksToPages(t *testing.T) {
 	if rec.Code != 200 {
 		t.Fatalf("status %d", rec.Code)
 	}
-	for _, want := range []string{`href="/links"`, `href="/results"`, "/vote?key="} {
+	for _, want := range []string{`href="/links"`, `href="/results"`, "/vote?key=", `href="https://mfinkel.net"`} {
 		if !strings.Contains(rec.Body.String(), want) {
 			t.Errorf("home missing %q", want)
 		}
