@@ -21,34 +21,47 @@
 <p>Results: <a href="{{.Results}}">{{.Results}}</a></p>
 
 <div class="snippet">
-  <header><strong>Slack</strong><button type="button" data-copy="slack">Copy</button></header>
-  <p class="muted">Slack renders <code>&lt;url|text&gt;</code> as a link when posted through the API or a workflow. For hand-typed messages use the plain text version; Slack links bare URLs.</p>
-  <pre id="slack">{{.Slack}}</pre>
+  <header><strong>For Slack or email</strong><button type="button" id="copy-rich">Copy</button></header>
+  <p class="muted">Paste into a Slack message or an email. The links come through as clickable text.</p>
+  <p id="rich">{{.HTML}}</p>
 </div>
 
 <div class="snippet">
-  <header><strong>Email (HTML)</strong><button type="button" data-copy="email">Copy</button></header>
-  <pre id="email">{{.Email}}</pre>
-</div>
-
-<div class="snippet">
-  <header><strong>Plain text</strong><button type="button" data-copy="plain">Copy</button></header>
+  <header><strong>Plain text</strong><button type="button" id="copy-plain">Copy</button></header>
+  <p class="muted">For places that strip formatting. Slack and most mail clients still turn the URLs into links.</p>
   <pre id="plain">{{.Plain}}</pre>
 </div>
 
-<div class="snippet">
-  <header><strong>Preview</strong></header>
-  <p>{{range $i, $l := .Links}}{{if $i}} · {{end}}<a href="{{$l.URL}}">{{$l.Label}}</a>{{end}}</p>
-</div>
-
 <script>
-  document.querySelectorAll('[data-copy]').forEach(function (b) {
-    b.addEventListener('click', function () {
-      navigator.clipboard.writeText(document.getElementById(b.dataset.copy).textContent).then(function () {
-        b.textContent = 'Copied';
-        setTimeout(function () { b.textContent = 'Copy'; }, 1500);
+  function flash(b) {
+    b.textContent = 'Copied';
+    setTimeout(function () { b.textContent = 'Copy'; }, 1500);
+  }
+
+  document.getElementById('copy-plain').addEventListener('click', function () {
+    var b = this;
+    navigator.clipboard.writeText(document.getElementById('plain').textContent).then(function () { flash(b); });
+  });
+
+  document.getElementById('copy-rich').addEventListener('click', function () {
+    var b = this;
+    var rich = document.getElementById('rich');
+    if (window.ClipboardItem) {
+      var item = new ClipboardItem({
+        'text/html': new Blob([rich.innerHTML], { type: 'text/html' }),
+        'text/plain': new Blob([rich.innerText], { type: 'text/plain' })
       });
-    });
+      navigator.clipboard.write([item]).then(function () { flash(b); });
+      return;
+    }
+    var range = document.createRange();
+    range.selectNodeContents(rich);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    document.execCommand('copy');
+    sel.removeAllRanges();
+    flash(b);
   });
 </script>
 {{end}}

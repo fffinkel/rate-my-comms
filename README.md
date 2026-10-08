@@ -24,8 +24,8 @@ Logs are JSON on stdout. `GET /healthz` returns `ok`.
 
 ## Use
 
-Open `/links`, enter the email subject or post title, and copy the Slack, HTML
-email, or plain text snippet into your message. Or write the links by hand:
+Open `/links`, enter the email subject or post title, click Copy, and paste
+into your Slack message or email. Or write the links by hand:
 
 ```
 https://rate.example.com/vote?key=Weekly%20update&value=yes

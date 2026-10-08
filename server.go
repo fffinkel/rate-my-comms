@@ -4,6 +4,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"html"
 	"html/template"
 	"log/slog"
 	"net/http"
@@ -70,8 +71,7 @@ func (s *server) links(w http.ResponseWriter, r *http.Request) {
 		Kind    string
 		KeyErr  string
 		Links   []link
-		Slack   string
-		Email   string
+		HTML    template.HTML
 		Plain   string
 		Results string
 	}{Key: key, Kind: kind}
@@ -88,7 +88,7 @@ func (s *server) links(w http.ResponseWriter, r *http.Request) {
 			} else {
 				data.Links = []link{{"Yes", voteURL(base, key, "yes")}, {"No", voteURL(base, key, "no")}}
 			}
-			data.Slack, data.Email, data.Plain = snippets(kind, data.Links)
+			data.HTML, data.Plain = snippets(kind, data.Links)
 			data.Results = base + "/results?key=" + escape(key)
 		}
 	}
@@ -100,21 +100,20 @@ type link struct {
 	URL   string
 }
 
-func snippets(kind string, links []link) (slack, email, plain string) {
-	var sl, em, pl []string
+// snippets builds the rich text that gets copied to the clipboard and a
+// plain text fallback with bare URLs.
+func snippets(kind string, links []link) (template.HTML, string) {
+	var hs, pl []string
 	for _, l := range links {
-		sl = append(sl, fmt.Sprintf("<%s|%s>", l.URL, l.Label))
-		em = append(em, fmt.Sprintf(`<a href="%s">%s</a>`, l.URL, l.Label))
+		hs = append(hs, fmt.Sprintf(`<a href="%s">%s</a>`, html.EscapeString(l.URL), html.EscapeString(l.Label)))
 		pl = append(pl, l.Label+": "+l.URL)
 	}
 	prompt := "Was this communication useful?"
 	if kind == "scale" {
 		prompt = fmt.Sprintf("How useful was this communication? (1 = not useful, %d = very useful)", len(links))
 	}
-	slack = prompt + " " + strings.Join(sl, " · ")
-	email = "<p>" + prompt + " " + strings.Join(em, " &middot; ") + "</p>"
-	plain = prompt + "\n" + strings.Join(pl, "\n")
-	return
+	h := template.HTML(html.EscapeString(prompt) + " " + strings.Join(hs, " &middot; "))
+	return h, prompt + "\n" + strings.Join(pl, "\n")
 }
 
 // baseURL is the public prefix for generated links, taken from the request.
