@@ -112,9 +112,9 @@ func snippets(kind string, links []link) (slack, email, plain string) {
 		em = append(em, fmt.Sprintf(`<a href="%s">%s</a>`, l.URL, l.Label))
 		pl = append(pl, l.Label+": "+l.URL)
 	}
-	prompt := "Was this useful?"
+	prompt := "Was this communication useful?"
 	if kind == "scale" {
-		prompt = fmt.Sprintf("Rate this (1 = not useful, %d = very useful):", len(links))
+		prompt = fmt.Sprintf("Was this communication useful? (1 = not useful, %d = very useful)", len(links))
 	}
 	slack = prompt + " " + strings.Join(sl, " · ")
 	email = "<p>" + prompt + " " + strings.Join(em, " &middot; ") + "</p>"
