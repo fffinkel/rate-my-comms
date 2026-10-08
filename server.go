@@ -19,7 +19,7 @@ var templateFS embed.FS
 const (
 	maxKeyLen     = 200
 	maxCommentLen = 4000
-	maxScale      = 10
+	scaleTop      = 5
 )
 
 type server struct {
@@ -33,7 +33,7 @@ func newServer(store Store, log *slog.Logger) http.Handler {
 	s := &server{
 		store: store,
 		log:   log,
-		tmpl:  template.Must(template.New("").Funcs(template.FuncMap{"seq": seq}).ParseFS(templateFS, "templates/*.html")),
+		tmpl:  template.Must(template.ParseFS(templateFS, "templates/*.html")),
 		mux:   http.NewServeMux(),
 	}
 	s.mux.HandleFunc("GET /{$}", s.home)
@@ -55,8 +55,8 @@ func (s *server) home(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "home.html", struct{ Base string }{baseURL(r)})
 }
 
-// links shows copy-paste snippets for a key. Query params key, kind and
-// scale let the page be bookmarked.
+// links shows copy-paste snippets for a key. Query params key and kind
+// let the page be bookmarked.
 func (s *server) links(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	key := strings.TrimSpace(q.Get("key"))
@@ -64,22 +64,17 @@ func (s *server) links(w http.ResponseWriter, r *http.Request) {
 	if kind != "scale" {
 		kind = "yesno"
 	}
-	scale, _ := strconv.Atoi(q.Get("scale"))
-	if scale < 2 || scale > maxScale {
-		scale = 5
-	}
 
 	data := struct {
 		Key     string
 		Kind    string
-		Scale   int
 		KeyErr  string
 		Links   []link
 		Slack   string
 		Email   string
 		Plain   string
 		Results string
-	}{Key: key, Kind: kind, Scale: scale}
+	}{Key: key, Kind: kind}
 
 	if key != "" {
 		if err := validKey(key); err != nil {
@@ -87,7 +82,7 @@ func (s *server) links(w http.ResponseWriter, r *http.Request) {
 		} else {
 			base := baseURL(r)
 			if kind == "scale" {
-				for i := 1; i <= scale; i++ {
+				for i := 1; i <= scaleTop; i++ {
 					data.Links = append(data.Links, link{strconv.Itoa(i), voteURL(base, key, strconv.Itoa(i))})
 				}
 			} else {
@@ -139,15 +134,6 @@ func voteURL(base, key, value string) string {
 // survives email clients and chat tools more reliably.
 func escape(s string) string {
 	return strings.ReplaceAll(url.QueryEscape(s), "+", "%20")
-}
-
-// seq returns the integers from a to b inclusive, for template loops.
-func seq(a, b int) []int {
-	out := make([]int, 0, b-a+1)
-	for i := a; i <= b; i++ {
-		out = append(out, i)
-	}
-	return out
 }
 
 // vote records the click, then shows an optional comment box. The vote
@@ -266,13 +252,13 @@ func validKey(key string) error {
 	return nil
 }
 
-// validValue accepts yes, no, or an integer from 1 to maxScale.
+// validValue accepts yes, no, or an integer from 1 to scaleTop.
 func validValue(v string) error {
 	if v == "yes" || v == "no" {
 		return nil
 	}
-	if n, err := strconv.Atoi(v); err == nil && n >= 1 && n <= maxScale {
+	if n, err := strconv.Atoi(v); err == nil && n >= 1 && n <= scaleTop {
 		return nil
 	}
-	return fmt.Errorf("value must be yes, no, or a number from 1 to %d", maxScale)
+	return fmt.Errorf("value must be yes, no, or a number from 1 to %d", scaleTop)
 }

@@ -40,7 +40,7 @@ func TestVoteCountsOnClick(t *testing.T) {
 
 func TestVoteRejectsBadValue(t *testing.T) {
 	_, h := newTestServer(t)
-	for _, v := range []string{"", "maybe", "0", "11", "3.5"} {
+	for _, v := range []string{"", "maybe", "0", "6", "3.5"} {
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, httptest.NewRequest("GET", "/vote?key=k&value="+url.QueryEscape(v), nil))
 		if rec.Code != 400 {
@@ -85,22 +85,22 @@ func TestCommentAttachesToVote(t *testing.T) {
 func TestLinksShowsSnippets(t *testing.T) {
 	_, h := newTestServer(t)
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/links?key=Q3+plan&kind=scale&scale=3", nil)
+	req := httptest.NewRequest("GET", "/links?key=Q3+plan&kind=scale", nil)
 	req.Host = "rate.example"
 	req.Header.Set("X-Forwarded-Proto", "https")
 	h.ServeHTTP(rec, req)
 	body := rec.Body.String()
 	for _, want := range []string{
 		"https://rate.example/vote?key=Q3%20plan&amp;value=1",
-		"https://rate.example/vote?key=Q3%20plan&amp;value=3",
+		"https://rate.example/vote?key=Q3%20plan&amp;value=5",
 		"https://rate.example/results?key=Q3%20plan",
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("links page missing %q", want)
 		}
 	}
-	if strings.Contains(body, "value=4") {
-		t.Error("scale 3 should not produce value=4")
+	if strings.Contains(body, "value=6") {
+		t.Error("scale should stop at 5")
 	}
 }
 

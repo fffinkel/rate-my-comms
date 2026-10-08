@@ -34,7 +34,7 @@ https://rate.example.com/vote?key=Weekly%20update&value=4
 ```
 
 Any GET to `/vote` counts one vote and shows the reader an optional comment
-box. `value` is `yes`, `no`, or an integer from 1 to 10. Use `%20` for spaces
+box. `value` is `yes`, `no`, or an integer from 1 to 5. Use `%20` for spaces
 in the key. Generated links use the request host; set `X-Forwarded-Proto`
 on your proxy for https.
 
